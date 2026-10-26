@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Interfaz de chat RAG moderna con soporte para ingesta de múltiples archivos y búsqueda semántica con InsForge.">
+  <title>InsForge RAG Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-layout" id="appLayout">
+    <!-- Input oculto para carga de múltiples archivos -->
+    <input type="file" id="fileInput" multiple accept=".txt,.md,.pdf,.json,.csv,.js,.ts,.html,.py,.doc,.docx" style="display: none;">
+
+    <!-- Backdrop para dispositivos móviles -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- Panel Lateral / Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <!-- Encabezado del Sidebar -->
+      <div class="sidebar-header">
+        <button type="button" class="btn-icon" id="sidebarToggleCollapse" title="Ocultar barra lateral" aria-label="Ocultar barra lateral">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+            <path d="M9 3v18"></path>
+          </svg>
+        </button>
+        <button type="button" class="btn-new-chat" id="btnNewChat">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 5v14M5 12h14"></path>
+          </svg>
+          <span>Nuevo chat</span>
+        </button>
+      </div>
+
+      <!-- Buscador rápido en el historial -->
+      <div class="sidebar-search">
+        <div class="search-input-wrapper">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </svg>
+          <input type="text" id="searchInput" placeholder="Buscar conversaciones..." aria-label="Buscar chats">
+        </div>
+      </div>
+
+      <!-- Lista de Conversaciones Históricas -->
+      <nav class="sidebar-history" id="chatHistoryNav" aria-label="Historial de conversaciones">
+        <!-- Renderizado dinámico desde JS (inicia vacío sin datos de prueba) -->
+      </nav>
+
+      <!-- Pie del Sidebar / Perfil de usuario -->
+      <div class="sidebar-footer">
+        <div class="user-menu-wrapper" id="userMenuWrapper">
+          <div class="user-profile-button" id="userProfileBtn" role="button" tabindex="0">
+            <div class="user-avatar">R</div>
+            <div class="user-info">
+              <span class="user-name">InsForge RAG</span>
+              <span class="user-plan" id="docsCountBadge">pgvector activo</span>
+            </div>
+            <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Cambiar tema claro/oscuro" aria-label="Cambiar tema">
+              <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+              </svg>
+              <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3a6 6 0 0 0 9 9 9 0 1 1-9-9Z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Área Principal de Chat -->
+    <main class="main-chat-container">
+      <!-- Barra superior / Header -->
+      <header class="chat-topbar">
+        <div class="topbar-left">
+          <button type="button" class="btn-icon mobile-menu-btn" id="mobileMenuBtn" aria-label="Abrir panel lateral" title="Abrir panel lateral">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+
+          <!-- Selector de modelo RAG -->
+          <div class="model-dropdown-container">
+            <button type="button" class="model-selector-btn" id="modelSelectorBtn">
+              <span class="model-name">InsForge RAG (pgvector)</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m6 9 6 6 6-6"></path>
+              </svg>
+            </button>
+            <div class="model-menu" id="modelMenu">
+              <div class="model-option active" data-model="InsForge RAG (pgvector)">
+                <div class="model-option-title">
+                  <strong>InsForge RAG (pgvector)</strong>
+                  <span class="model-badge">Activo</span>
+                </div>
+                <p>Búsqueda vectorial en Postgres con embeddings 1536d y síntesis estricta.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <!-- Botón de subir archivos en la barra superior -->
+          <button type="button" class="btn-topbar-action btn-upload-header" id="btnUploadHeader" title="Cargar y vectorizar archivos" aria-label="Cargar archivos">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <span class="btn-upload-text">Subir archivos</span>
+          </button>
+
+          <button type="button" class="btn-topbar-action" id="btnClearCurrentChat" title="Limpiar conversación actual" aria-label="Limpiar conversación">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Scroll del cuerpo de mensajes -->
+      <div class="chat-scroll-area" id="chatScrollArea">
+        <!-- Pantalla de bienvenida (Visible si el chat está vacío) -->
+        <section class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-logo-badge">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <h1 class="welcome-title">¿Qué deseas consultar en tus documentos?</h1>
+          <p class="welcome-subtitle">Puedes adjuntar múltiples archivos (.txt, .md, .pdf, .json, etc.) para vectorizarlos automáticamente o hacer consultas directas.</p>
+          
+          <div class="suggestion-grid">
+            <button type="button" class="suggestion-card" data-prompt="¿Qué es la arquitectura RAG y cómo funciona técnicamente?">
+              <span class="suggestion-tag">RAG</span>
+              <span class="suggestion-text">¿Qué es la arquitectura RAG y cómo funciona técnicamente?</span>
+            </button>
+            <button type="button" class="suggestion-card" data-prompt="¿Cuáles son las dos fases en las que se divide un RAG?">
+              <span class="suggestion-tag">Fases RAG</span>
+              <span class="suggestion-text">¿Cuáles son las dos fases en las que se divide un RAG?</span>
+            </button>
+            <button type="button" class="suggestion-card" data-prompt="¿De qué material está hecho el parasol del telescopio James Webb?">
+              <span class="suggestion-tag">James Webb</span>
+              <span class="suggestion-text">¿De qué material está hecho el parasol del telescopio James Webb?</span>
+            </button>
+            <button type="button" class="suggestion-card" data-prompt="¿En qué punto de Lagrange se encuentra ubicado el observatorio?">
+              <span class="suggestion-tag">Órbita</span>
+              <span class="suggestion-text">¿En qué punto de Lagrange se encuentra ubicado el observatorio?</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Contenedor del hilo de conversación -->
+        <section class="chat-thread" id="chatThread" aria-live="polite">
+          <!-- Mensajes renderizados aquí -->
+        </section>
+      </div>
+
+      <!-- Barra de entrada inferior -->
+      <footer class="chat-input-container">
+        <form class="chat-input-form" id="chatForm">
+          <!-- Lista de archivos adjuntos pendientes de ingesta -->
+          <div class="attached-files-bar" id="attachedFilesBar" style="display: none;"></div>
+
+          <label for="chatInput" class="visually-hidden">Escribe un mensaje o consulta</label>
+          <div class="input-box" id="dropZoneBox">
+            <button type="button" class="btn-attach" id="btnAttach" title="Adjuntar uno o varios archivos para generar embeddings" aria-label="Adjuntar archivos">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+              </svg>
+            </button>
+
+            <textarea 
+              id="chatInput" 
+              name="chatInput" 
+              rows="1" 
+              placeholder="Pregunta a tus documentos o adjunta archivos..." 
+              autocomplete="off"
+            ></textarea>
+
+            <div class="input-actions-right">
+              <button type="submit" class="btn-submit" id="btnSubmit" aria-label="Enviar mensaje" disabled>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="19" x2="12" y2="5"></line>
+                  <polyline points="5 12 12 5 19 12"></polyline>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <p class="input-disclaimer">Respuestas fundamentadas estrictamente en la base de datos de InsForge (pgvector).</p>
+        </form>
+      </footer>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
